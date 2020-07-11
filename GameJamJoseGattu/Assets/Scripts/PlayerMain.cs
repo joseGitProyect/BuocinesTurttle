@@ -7,6 +7,7 @@ using TMPro;
 
 public class PlayerMain : MonoBehaviour
 {
+    [SerializeField] Transform turtleTransform;
     [SerializeField] Movement movement;
     [SerializeField] ParticleSystem particles;
     [SerializeField] TMP_InputField IFrotateSpeedH;
@@ -17,6 +18,8 @@ public class PlayerMain : MonoBehaviour
     [SerializeField] TMP_InputField IFCameraDistance;
     [SerializeField] float playerLife;
     [SerializeField] float minTurnAngle, maxTurnAngle;
+    [SerializeField] GameObject damagePanel;
+    [SerializeField] TMP_Text life;
     public float rotateSpeedH = 5;
     public float rotateSpeedV = 5;
     public float waterSpeed = 10;
@@ -27,10 +30,13 @@ public class PlayerMain : MonoBehaviour
     GameObject player;
     Transform cameraTransform;
     bool isOnWaterShoot;
-    float startWaterShoot;
+    bool canAttack = true;
+    float startTimeTimer;
     float actualSpeed;
     float lastSpeed;
     float rotX;
+
+    bool isDamaged;
    
     void Start()
     {
@@ -43,26 +49,32 @@ public class PlayerMain : MonoBehaviour
     }
 
     private void Update()
-    {
-        if (!isOnWaterShoot && Input.GetMouseButtonDown(0))
+    {        
+        if(isOnWaterShoot)
         {
-            movement.Dash(cameraTransform.forward, waterSpeed);
-            startWaterShoot = Time.time;
-            particles.Play();
-            isOnWaterShoot = true;
-        }
-        else if(isOnWaterShoot)
-        {
-            if(Timer(startWaterShoot,waterTime,ref isOnWaterShoot))
+            if(Timer(startTimeTimer,waterTime,ref isOnWaterShoot))
             {
                 UpdateSpeed(lastSpeed);
                 particles.Stop();
+                canAttack = true;
+                WaterShoot(false);
             }
             else
             {
                 UpdateSpeed(waterSpeed);
             }
+        }
+        else if (canAttack && !isOnWaterShoot && Input.GetMouseButtonDown(0))
+        {
+            WaterShoot(true);
+        }
 
+        if (isDamaged)
+        {
+            if(Timer(startTimeTimer,1,ref isDamaged))
+            {
+                damagePanel.SetActive(false);
+            }
         }
         
         movement.ControlMyVelocity(actualSpeed);
@@ -84,6 +96,31 @@ public class PlayerMain : MonoBehaviour
     void LateUpdate()
     {
         MouseAiming();
+    }
+
+    void WaterShoot(bool isStart)
+    {
+        if (isStart)
+        {
+            LeanTween.value(0, 180, .8f).setOnUpdate(WaterShootAnim).setOnComplete(WaterShootAction).setEaseOutElastic();
+            canAttack = false;
+        }
+        else LeanTween.value(180, 0, .8f).setOnUpdate(WaterShootAnim).setEaseOutElastic();
+    }
+
+    void WaterShootAnim(float _val)
+    {
+        Vector3 newRot = turtleTransform.localRotation.eulerAngles;
+        newRot.y = _val;
+        turtleTransform.localRotation = Quaternion.Euler(newRot);
+    }
+
+    void WaterShootAction()
+    {
+        movement.Dash(cameraTransform.forward, waterSpeed);
+        startTimeTimer = Time.time;
+        particles.Play();
+        isOnWaterShoot = true;
     }
 
     void MouseAiming()
@@ -155,6 +192,7 @@ public class PlayerMain : MonoBehaviour
         float newLife = playerLife - _damage;
         if(newLife <= 0)
         {
+            playerLife = 0;
             PlayerDead();
         }
         else
@@ -162,6 +200,12 @@ public class PlayerMain : MonoBehaviour
             playerLife = newLife;
             //cambiar canvas
         }
+
+        life.text = "Life = " + playerLife;
+
+        isDamaged = true;
+        damagePanel.SetActive(true);
+        startTimeTimer = Time.time;
     }
 
     public void PlayerDead()
@@ -172,6 +216,7 @@ public class PlayerMain : MonoBehaviour
     private void OnCollisionEnter(Collision collision)
     {
         InteractableObject interactable = collision.gameObject.GetComponent<InteractableObject>();
+        print(collision.gameObject.name);
         if(interactable != null)
         {
             UpdateSpeed(interactable.bouncinesPower);
@@ -179,14 +224,14 @@ public class PlayerMain : MonoBehaviour
         }
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        InteractableEnemy enemy = other.gameObject.GetComponent<InteractableEnemy>();
-        if(enemy!= null)
-        {
-            enemy.Hunt(player.transform);
-        }
-    }
+    //private void OnTriggerEnter(Collider other)
+    //{
+    //    InteractableEnemy enemy = other.gameObject.GetComponent<InteractableEnemy>();
+    //    if(enemy!= null)
+    //    {
+    //        enemy.Hunt(player.transform);
+    //    }
+    //}
 
     public void UpdateSpeed(float _newSpeed)
     {
