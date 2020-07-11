@@ -15,14 +15,15 @@ public class InteractableEnemy : InteractableMovible
 
     protected override void Awake2()
     {
-        rb = GetComponent<Rigidbody>();
-        myTrigger = gameObject.AddComponent<SphereCollider>();
-        myTrigger.radius = range;
-        myTrigger.isTrigger = true;
+        //rb = GetComponent<Rigidbody>();
+        ////myTrigger = gameObject.AddComponent<SphereCollider>();
+        ////myTrigger.radius = range;
+        ////myTrigger.isTrigger = true;
     }
 
     public override void DoEffect(PlayerMain playerMain)
     {
+        print("DOEFFECT");
         playerMain.TakeDamage(damage);
     }
 
