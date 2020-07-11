@@ -14,6 +14,9 @@ public class PlayerMain : MonoBehaviour
     [SerializeField] TMP_InputField IFwaterSpeed;
     [SerializeField] TMP_InputField IFwaterTime;
     [SerializeField] TMP_InputField IFspeed;
+    [SerializeField] TMP_InputField IFCameraDistance;
+    [SerializeField] float playerLife;
+    [SerializeField] float minTurnAngle, maxTurnAngle;
     public float rotateSpeedH = 5;
     public float rotateSpeedV = 5;
     public float waterSpeed = 10;
@@ -26,6 +29,8 @@ public class PlayerMain : MonoBehaviour
     bool isOnWaterShoot;
     float startWaterShoot;
     float actualSpeed;
+    float lastSpeed;
+    float rotX;
    
     void Start()
     {
@@ -50,12 +55,12 @@ public class PlayerMain : MonoBehaviour
         {
             if(Timer(startWaterShoot,waterTime,ref isOnWaterShoot))
             {
-                actualSpeed = speed;
+                UpdateSpeed(lastSpeed);
                 particles.Stop();
             }
             else
             {
-                actualSpeed = waterSpeed;
+                UpdateSpeed(waterSpeed);
             }
 
         }
@@ -78,16 +83,23 @@ public class PlayerMain : MonoBehaviour
 
     void LateUpdate()
     {
-        float horizontal = Input.GetAxis("Mouse X") * rotateSpeedH;
-        float Vertical = Input.GetAxis("Mouse Y") * rotateSpeedV;
-        player.transform.Rotate(Vertical, horizontal, 0);
+        MouseAiming();
+    }
 
-        float desiredAngleH = player.transform.eulerAngles.y;
-        float desiredAngleV = player.transform.eulerAngles.x;
-        Quaternion rotation = Quaternion.Euler(desiredAngleV, desiredAngleH, 0);
-        cameraTransform.position = player.transform.position - (rotation * offset);
+    void MouseAiming()
+    {
+        float y = Input.GetAxis("Mouse X") * rotateSpeedH;
+        rotX += Input.GetAxis("Mouse Y") * rotateSpeedV;
 
-        cameraTransform.LookAt(player.transform);
+        // clamp the vertical rotation
+        rotX = Mathf.Clamp(rotX, minTurnAngle, maxTurnAngle);
+
+        // rotate the camera
+        cameraTransform.eulerAngles = new Vector3(-rotX, cameraTransform.eulerAngles.y + y, 0);
+        player.transform.eulerAngles = new Vector3(-rotX, player.transform.eulerAngles.y + y, 0);
+
+        // move the camera position
+        cameraTransform.position = player.transform.position - (cameraTransform.rotation * offset);
     }
 
     public bool Timer(float _startTime, float duration, ref bool isTimerActive)
@@ -121,6 +133,9 @@ public class PlayerMain : MonoBehaviour
             case "WaterTime":
                 waterTime = float.Parse(IFwaterTime.text);
                 break;
+            case "CameraDis":
+                offset.z = float.Parse(IFCameraDistance.text);
+                break;
         }
     }
 
@@ -131,10 +146,52 @@ public class PlayerMain : MonoBehaviour
         IFspeed.text = speed.ToString();
         IFwaterSpeed.text = waterSpeed.ToString();
         IFwaterTime.text = waterTime.ToString();
+        IFCameraDistance.text = (cameraOffSet.z).ToString();
+    }
+
+    public void TakeDamage(float _damage)
+    {
+        //feedback
+        float newLife = playerLife - _damage;
+        if(newLife <= 0)
+        {
+            PlayerDead();
+        }
+        else
+        {
+            playerLife = newLife;
+            //cambiar canvas
+        }
+    }
+
+    public void PlayerDead()
+    {
+
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-        print(collision.gameObject.name);
+        InteractableObject interactable = collision.gameObject.GetComponent<InteractableObject>();
+        if(interactable != null)
+        {
+            UpdateSpeed(interactable.bouncinesPower);
+            interactable.DoEffect(this);
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        InteractableEnemy enemy = other.gameObject.GetComponent<InteractableEnemy>();
+        if(enemy!= null)
+        {
+            enemy.Hunt(player.transform);
+        }
+    }
+
+    public void UpdateSpeed(float _newSpeed)
+    {
+        float newSpeed = _newSpeed;
+        lastSpeed = actualSpeed;
+        actualSpeed = newSpeed;
     }
 }

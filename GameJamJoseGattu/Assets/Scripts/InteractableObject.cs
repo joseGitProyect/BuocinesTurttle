@@ -4,8 +4,13 @@ using UnityEngine;
 
 public class InteractableObject : MonoBehaviour
 {
-    ObjectType objectType;
+    public ObjectType objectType;
+    public float bouncinesPower;
 
+    public virtual void DoEffect(PlayerMain playerMain)
+    {
+
+    }
 }
 
 public enum ObjectType
