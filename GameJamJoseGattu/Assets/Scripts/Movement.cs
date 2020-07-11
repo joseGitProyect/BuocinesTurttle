@@ -7,6 +7,7 @@ using UnityEngine;
 public class Movement : MonoBehaviour
 {
     Rigidbody rb;
+    Vector3 velocity;
 
     private void Awake()
     {
@@ -31,6 +32,13 @@ public class Movement : MonoBehaviour
 
     public void Dash(Vector3 _direction, float _force)
     {
-        rb.AddForce(_direction * _force, ForceMode.Impulse);
+        rb.velocity = _direction * _force;
+    }
+
+    public void ControlMyVelocity(float _maxSpeed)
+    {
+        velocity = rb.velocity;
+        velocity = velocity.normalized * _maxSpeed;
+        rb.velocity = velocity;
     }
 }
